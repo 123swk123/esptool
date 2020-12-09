@@ -3789,12 +3789,25 @@ class AddrFilenamePairAction(argparse.Action):
                 address = int(values[i], 0)
             except ValueError:
                 raise argparse.ArgumentError(self, 'Address "%s" must be a number' % values[i])
-            try:
-                argfile = open(values[i + 1], 'rb')
-            except IOError as e:
-                raise argparse.ArgumentError(self, e)
-            except IndexError:
-                raise argparse.ArgumentError(self, 'Must be pairs of an address and the binary filename to write there')
+            
+            if values[i+1].startswith('*@$'):
+                # this is base64 encoded BLOB
+                argfile = io.BytesIO(zlib.decompress(base64.b64decode(values[i + 1][3:].encode('utf-8'))))
+                if address == 0:
+                    argfile.name = 'boot BLOB'
+                elif address == 0x1000:
+                    argfile.name = 'boot BLOB'
+                elif address == 0x8000:
+                    argfile.name = 'partition BLOB'
+                else:
+                    argfile.name = 'app BLOB'
+            else:
+                try:
+                    argfile = open(values[i + 1], 'rb')
+                except IOError as e:
+                    raise argparse.ArgumentError(self, e)
+                except IndexError:
+                    raise argparse.ArgumentError(self,'Must be pairs of an address and the binary filename to write there')
             pairs.append((address, argfile))
 
         # Sort the addresses and check for overlapping
